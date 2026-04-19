@@ -1,5 +1,57 @@
+from typing import Optional
+
 from google.adk.agents.llm_agent import Agent
 from google.adk.models import LiteLlm
+
+from typing import Optional, Any
+
+
+def save_info_to_state(
+        destination: Optional[str] = None,
+        origin: Optional[str] = None,
+        date_from_start: Optional[str] = None,
+        date_from_end: Optional[str] = None,
+        date_to_start: Optional[str] = None,
+        date_to_end: Optional[str] = None,
+        default_currency: Optional[str] = None,
+        hotel_rating: Optional[str] = None,
+        tool_context=None,
+) -> dict[str, Any]:
+    state = tool_context.state
+
+    if "trip" not in state:
+        state["trip"] = {
+            "destination": None,
+            "origin": None,
+            "date_from_start": None,
+            "date_from_end": None,
+            "date_to_start": None,
+            "date_to_end": None,
+            "default_currency": None,
+            "hotel_rating": None,
+        }
+
+    updated_fields = {}
+
+    def maybe_update(field_name: str, value: Optional[str]):
+        if value is not None:
+            state["trip"][field_name] = value
+            updated_fields[field_name] = value
+
+    maybe_update("destination", destination)
+    maybe_update("origin", origin)
+    maybe_update("date_from_start", date_from_start)
+    maybe_update("date_from_end", date_from_end)
+    maybe_update("date_to_start", date_to_start)
+    maybe_update("date_to_end", date_to_end)
+    maybe_update("default_currency", default_currency)
+    maybe_update("hotel_rating", hotel_rating)
+
+    return {
+        "status": "ok",
+        "updated_fields": updated_fields,
+        "trip": state["trip"],
+    }
 
 
 root_agent = Agent(
@@ -15,9 +67,14 @@ root_agent = Agent(
                 4. helper: Answers all user's questions not about flights, hotels or activities. e.g: cheapest groceries, taxi providers (app or phone call), buses... 
                 
                 Your tools:
-                1. [MEMORY] Get user's interests from DB by ID: get_user_interests
-                2. [MEMORY] Save user's interests to DB by ID: save_user_interests
+                1. [LONGTIME_MEMORY] Get user's interests from DB by ID: get_user_interests
+                2. [LONGTIME_MEMORY] Save user's interests to DB by ID: save_user_interests
                 3. Currency converter: currency_converter 
+                4. [SESSION_MEMORY] Save session state: save_info_to_state
+                
+                If the user provides new trip information, call `save_info_to_state` with only the fields you are confident about.
+                Do not call the tool if no new structured information was provided.
+                Never overwrite known fields with null or guessed values.
                 
                 Your responsibilities:
                 - **MEMORY CHECK**: At the start of conversation, use `get_user_interests` (if ID provided) to get all users interests from your memory.
@@ -32,10 +89,5 @@ root_agent = Agent(
                 - If the user asks only for certain items (e.g only the hotel and activities) skip the useless agent.   
                 """,
     sub_agents=[],
-    tools=[]
+    tools=[save_info_to_state]
 )
-
-
-
-
-
