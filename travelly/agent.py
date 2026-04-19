@@ -1,5 +1,3 @@
-from typing import Optional
-
 from google.adk.agents.llm_agent import Agent
 from google.adk.models import LiteLlm
 
@@ -13,6 +11,7 @@ def save_info_to_state(
         date_from_end: Optional[str] = None,
         date_to_start: Optional[str] = None,
         date_to_end: Optional[str] = None,
+        trip_duration: Optional[int] = None,
         default_currency: Optional[str] = None,
         hotel_rating: Optional[str] = None,
         tool_context=None,
@@ -27,6 +26,7 @@ def save_info_to_state(
             "date_from_end": None,
             "date_to_start": None,
             "date_to_end": None,
+            "trip_duration": None,
             "default_currency": None,
             "hotel_rating": None,
         }
@@ -46,6 +46,7 @@ def save_info_to_state(
     maybe_update("date_to_end", date_to_end)
     maybe_update("default_currency", default_currency)
     maybe_update("hotel_rating", hotel_rating)
+    maybe_update("trip_duration", trip_duration)
 
     return {
         "status": "ok",
