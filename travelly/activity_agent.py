@@ -1,9 +1,8 @@
 from google.adk.agents import LlmAgent
 from google.adk.models import Gemini
-from google.adk.tools.google_search_tool import GoogleSearchTool
 from google.adk.tools.load_web_page import load_web_page
 
-from travelly.tools import currency_converter
+from travelly.tools import currency_converter, tavily_activity_search
 
 
 activity_manager = LlmAgent(
@@ -29,8 +28,11 @@ activity_manager = LlmAgent(
                   concerts/live music, family friendly, extreme/adventure, museums/culture, food/nightlife.
 
                 Research rules:
-                - Use Google Search to find up-to-date activities, events, afisha pages, venue calendars,
+                - Use `tavily_activity_search` to find up-to-date activities, events, afisha pages, venue calendars,
                   exhibitions, concerts, and city entertainment options.
+                - For dated events, prefer `topic="news"` with `time_range="month"` or `time_range="week"` when appropriate.
+                - For evergreen leisure ideas, use `topic="general"`.
+                - Prefer queries that include the city, country, and if known, the travel month or exact dates.
                 - When useful, open promising result pages with `load_web_page` to extract real details.
                 - Prefer official sources: venue sites, museum pages, festival pages, city event calendars,
                   trusted ticketing sites, and reputable local listings.
@@ -48,5 +50,5 @@ activity_manager = LlmAgent(
                 - Be proactive and useful, but do not overwhelm the user with too many options at once.
                 - If the user is undecided, suggest a balanced starter mix across a few categories.
                 """,
-    tools=[GoogleSearchTool(bypass_multi_tools_limit=True), load_web_page, currency_converter],
+    tools=[tavily_activity_search, load_web_page, currency_converter],
 )
