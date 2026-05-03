@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 from urllib import error, parse, request
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -191,6 +192,105 @@ def normalize_city_name(city_query: str) -> dict[str, Any]:
         "latitude": best_match.get("lat"),
         "longitude": best_match.get("lon"),
         "source": "nominatim.openstreetmap.org",
+    }
+
+
+def tavily_activity_search(
+        query: str,
+        max_results: int = 5,
+        topic: str = "general",
+        search_depth: str = "advanced",
+        time_range: Optional[str] = None,
+        country: Optional[str] = None,
+        include_domains: Optional[list[str]] = None,
+        exclude_domains: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    """Searches the live web for activities and events using Tavily Search."""
+    api_key = os.getenv("TAVILY_API_KEY")
+    if not api_key:
+        return {
+            "status": "unavailable",
+            "message": "TAVILY_API_KEY is not configured.",
+        }
+
+    normalized_query = query.strip()
+    if not normalized_query:
+        return {
+            "status": "error",
+            "message": "query is required.",
+        }
+
+    normalized_max_results = max(1, min(max_results, 10))
+    payload: dict[str, Any] = {
+        "query": normalized_query,
+        "max_results": normalized_max_results,
+        "topic": topic,
+        "search_depth": search_depth,
+        "include_answer": False,
+        "include_raw_content": False,
+        "include_images": False,
+        "include_favicon": False,
+        "include_usage": True,
+    }
+
+    if time_range:
+        payload["time_range"] = time_range
+    if country:
+        payload["country"] = country
+    if include_domains:
+        payload["include_domains"] = include_domains
+    if exclude_domains:
+        payload["exclude_domains"] = exclude_domains
+
+    try:
+        response = requests.post(
+            "https://api.tavily.com/search",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "travelly/1.0",
+            },
+            json=payload,
+            timeout=20,
+        )
+        data = response.json()
+    except requests.RequestException as exc:
+        return {
+            "status": "error",
+            "message": f"Tavily search request failed: {exc}",
+        }
+    except ValueError:
+        return {
+            "status": "error",
+            "message": "Tavily search returned invalid JSON.",
+        }
+
+    if response.status_code != 200:
+        return {
+            "status": "error",
+            "message": f"Tavily search request failed with status {response.status_code}.",
+            "details": data,
+        }
+
+    results = []
+    for item in data.get("results", []):
+        results.append(
+            {
+                "title": item.get("title"),
+                "url": item.get("url"),
+                "content": item.get("content"),
+                "score": item.get("score"),
+            }
+        )
+
+    return {
+        "status": "ok",
+        "query": data.get("query", normalized_query),
+        "results": results,
+        "response_time": data.get("response_time"),
+        "source": "tavily.com",
+        "usage": data.get("usage"),
     }
 
 
